@@ -1,9 +1,7 @@
-import numpy as np
+# import numpy as np
 from ipywidgets import widgets, Layout
 import os
-from pint import UnitRegistry
-
-ur = UnitRegistry()
+from units import unit
 
 
 def filename_widget(description):
@@ -20,25 +18,26 @@ def filename_widget(description):
 
         except (KeyError, TypeError):
             pass
-    
+
     entry.observe(observer)
     return widgets.Box([entry, validation]), entry
 
 
 def quantity_widget(description, dimension):
-    entry = widgets.Text(value='', placeholder='quantity of {}'.format(dimension),
-                         description=description, disabled=False)
+    entry = widgets.Text(
+        value='', placeholder='quantity of {}'.format(dimension),
+        description=description, disabled=False)
     validation = widgets.Valid(value=False, description='correct units')
 
     def observer(change):
         try:
             s = change['new']['value']
-            v = ur(s)
+            v = unit(s)
             validation.value = (v.dimensionality == dimension)
-            
+
         except Exception:
             pass
-    
+
     entry.observe(observer)
     return widgets.Box([entry, validation]), entry
 
@@ -52,14 +51,21 @@ def make_input_box(config):
     value_kw = widgets.Text(
         value='', placeholder='value name', description='Value keyword: ')
 
-    load_button = widgets.HBox(
-        [widgets.Button(description='Load', button_style='info')],
+    button = widgets.Button(description='Load', button_style='info')
+    button_box = widgets.HBox(
+        [button],
         layout=Layout(justify_content='flex-end'))
 
     input_box = widgets.VBox([
         input_file_box, control_file_box, longitude_kw,
-        lattitude_kw, value_kw, load_button])
+        lattitude_kw, value_kw, button_box])
 
+    config.expose('load', button)
+    config.expose('input_file', input_file_text)
+    config.expose('control_file', control_file_text)
+    config.expose('longitude_kw', longitude_kw)
+    config.expose('lattitude_kw', lattitude_kw)
+    config.expose('variable', value_kw)
     return input_box
 
 
@@ -75,33 +81,50 @@ def make_selection_box(config):
             range(12))),
         value=0,
         description='Month:',
-        disabled=False,
-    )
+        disabled=False)
     children[1] = month
 
     tab.children = children
     for i in range(len(children)):
         tab.set_title(i, tab_contents[i])
 
-    selection_box = widgets.HBox([tab])
+    button = widgets.Button(description='Select', button_style='info')
+    button_box = widgets.HBox(
+        [button],
+        layout=Layout(justify_content='flex-end'))
+
+    selection_box = widgets.VBox([tab, button_box])
 
     config.expose("selection_tab", tab)
     config.expose("month", month)
+    config.expose("select", button)
+
     return selection_box
 
 
 def make_filtering_box(config):
     sigma_l_box, sigma_l = quantity_widget(
-        "spatial smoothing radius (gaussian std-dev)", "[length]")
+        "space smoothing radius (gaussian std-dev)", "[length]")
     sigma_t_box, sigma_t = quantity_widget(
         "time smoothing interval (gaussian std-dev)", "[time]")
-    sensity_box, sensitivity_ratio = quantity_widget(
-        "sensitivity ratio", "[length]/[time]")
+    weight_l_box, weight_l = quantity_widget(
+        "space sobel weight", "[length]")
+    weight_t_box, weight_t = quantity_widget(
+        "time sobel weight", "[time]")
 
-    filtering_box = widgets.VBox([sigma_l_box, sigma_t_box, sensity_box])
+    button = widgets.Button(description='Filter', button_style='info')
+    button_box = widgets.HBox(
+        [button],
+        layout=Layout(justify_content='flex-end'))
+
+    filtering_box = widgets.VBox(
+        [sigma_l_box, sigma_t_box, weight_l_box, weight_t_box,
+         button_box])
     config.expose("sigma_l", sigma_l)
     config.expose("sigma_t", sigma_t)
-    config.expose("sensitivity_ratio", sensitivity_ratio)
+    config.expose("weight_l", weight_l)
+    config.expose("weight_t", weight_t)
+    config.expose("filter", button)
     return filtering_box
 
 
@@ -111,7 +134,7 @@ class ConfigWidget(widgets.Accordion):
         super(ConfigWidget, self).__init__(children=[
             make_input_box(self),
             make_selection_box(self),
-            filtering_box(self)])
+            make_filtering_box(self)])
         self.set_title(0, 'Input specification')
         self.set_title(1, 'Selection')
         self.set_title(2, 'Filtering')
@@ -122,3 +145,6 @@ class ConfigWidget(widgets.Accordion):
     def __getitem__(self, item):
         return self.exposed_widgets[item]
 
+
+class OutputWidget:
+    pass
