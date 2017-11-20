@@ -16,25 +16,10 @@ plt.rcParams['figure.figsize'] = (25, 10)
 import os
 from hyper_canny import cp_edge_thinning, cp_double_threshold
 
+
 path = "/mnt/Knolselderij/bulk/Abrupt/"
 fn1 = "tas_Amon_MPI-ESM-LR_rcp85_r1i1p1_200601-210012.nc"
 fn2 = "tas_Amon_MPI-ESM-LR_rcp85_r1i1p1_210101-230012.nc"
-
-
-def plot_orthographic_np(lats, lons, tas, **pargs):
-    tas = np.concatenate([tas[:,:], tas[:, 0:1]], axis=1)
-    lons = np.concatenate([lons, lons[0:1]])
-    lats = np.concatenate([lats, [90.0]])
-    tas = np.concatenate([tas[:,:], tas[0:1,:]], axis=0)
-
-    proj=ccrs.Orthographic(central_latitude=90)
-    ax = plt.axes(projection=proj)
-    plt.pcolormesh(
-        lons, lats, tas, **pargs,
-        transform=ccrs.RotatedPole(pole_longitude=180.0, pole_latitude=90))
-    ax.coastlines()
-    plt.colorbar()
-    plt.show()
 
 
 def plot_mollweide(lats, lons, tas, **pargs):
@@ -64,44 +49,6 @@ def plot_plate_carree(lats, lons, tas):
     plt.colorbar()
     plt.show()
 
-
-
-def is_linear(a, eps=1e-3):
-    x = np.diff(a[1:-1]).std() / np.diff(a[1:-1]).mean()
-    return x < eps
-
-
-R_earth = 6.371e3             # km
-day = 0.0027378507871321013   # years
-
-
-class Box:
-    def __init__(self, nc):
-        self.lat = nc.variables['lat']
-        self.lon = nc.variables['lon']
-        self.time = nc.variables['time']
-
-    def __getitem__(self, s):
-        new_box = copy(self)
-
-        if not isinstance(s, tuple):
-            s = (s,)
-
-        for q, t in zip(s, ['time', 'lat', 'lon']):
-            setattr(new_box, t, getattr(self, t).__getitem__(s))
-
-        return new_box
-
-    @property
-    def rectangular(self):
-        return is_linear(self.lat) and is_linear(self.lon)
-
-    @property
-    def resolution(self):
-        res_lat = np.diff(self.lat[1:-1]).mean() * (np.pi / 180) * R_earth
-        res_lon = np.diff(self.lon[1:-1]).mean() * (np.pi / 180) * R_earth
-        res_time = np.diff(self.time[1:-1]).mean() * day
-        return res_time, res_lat, res_lon
 
 # box = Box(get_data(os.path.join(path, fn1)))
 
