@@ -94,7 +94,7 @@ class Box:
         else:
             return gaussian_filter_2d(self, data, *sigma)
 
-    def sobel_filter(self, data, weight=None):
+    def sobel_filter(self, data, weight=None, physical=True):
         """Sobel filter. Effectively computes a derivative.  This filter is
         normalised to return a rate of change per pixel, or if weights are
         given, the value is multiplied by the weight to obtain a unitless
@@ -107,6 +107,6 @@ class Box:
             a vector magnitude; should have units corresponding those given
             by ``box.resolution``."""
         if self.time is not None:
-            return sobel_filter_3d(self, data, weight)
+            return sobel_filter_3d(self, data, weight, physical)
         else:
-            return sobel_filter_2d(self, data, weight)
+            return sobel_filter_2d(self, data, weight, physical)
