@@ -1,0 +1,8 @@
+numpy
+scipy
+cython
+-e git://github.com/abrupt-climate/hyper-canny#egg=hyper-canny
+jupyter
+matplotlib
+cartopy
+pint
