@@ -96,7 +96,7 @@ def sobel_filter_2d(box, data, weight=None, physical=True):
     return sb
 
 
-def sobel_filter_3d(box, data, weight=None, physical=True):
+def sobel_filter_3d(box, data, weight=None, physical=True, variability=None):
     """Sobel filter in 3D (time x lat x lon). Effectively computes a
     derivative.  This filter is normalised to return a rate of change per
     pixel, or if weights are given, the value is multiplied by the weight to
@@ -119,6 +119,10 @@ def sobel_filter_3d(box, data, weight=None, physical=True):
     sb = np.array([
         sobel(data, mode=['reflect', 'reflect', 'wrap'], axis=i) * y[i]
         for i in range(3)])
+
+    if variability is not None:
+        for i in range(3):
+            sb[i] /= variability[i]
 
     if physical:
         sb[2, :, :, :] /= np.cos(box.lat / 180 * np.pi)[None, :, None]
