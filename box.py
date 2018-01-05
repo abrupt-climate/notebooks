@@ -9,6 +9,8 @@ from filters import (
 
 from pyparsing import Word, alphas, nums, Group, Suppress, Combine, tokenMap
 from datetime import date, timedelta
+from stats import weighted_quartiles
+
 
 R_earth = 6.371e3 * unit.km
 day = 0.0027378507871321013 * unit.year
@@ -56,6 +58,15 @@ class File(object):
     def lon(self):
         return self.data.variables['lon'][:]
 
+    @property
+    def lat_bnds(self):
+        return self.data.variables['lat_bnds'][:]
+
+    @property
+    def lon_bnds(self):
+        return self.data.variables['lon_bnds'][:]
+
+
     def get(self, var):
         return self.data.variables[var][self.bounds]
 
@@ -80,6 +91,7 @@ class DataSet(object):
         self.realization = realization
 
         self._box = None
+        self._data = None
 
     def glob(self):
         return list(self.path.glob(self.pattern.format(**self.__dict__)))
@@ -95,30 +107,40 @@ class DataSet(object):
         for f, b in zip(self.files, bounds):
             f.bounds = b
 
+        self._data = None
+
     @property
     def box(self):
         if self._box is None:
             time = np.concatenate([f.time for f in self.files])
             lat = self.files[0].lat
             lon = self.files[0].lon
+            lat_bnds = self.files[0].lat_bnds
+            lon_bnds = self.files[0].lon_bnds
             dt, t0 = self.files[0].time_units
-            self._box = Box(time, lat, lon, dt, t0)
+            self._box = Box(time, lat, lon, lat_bnds, lon_bnds, dt, t0)
 
         return self._box
 
     @property
     def data(self):
-        return np.concatenate([f.get(self.variable) for f in self.files])
+        if self._data is None:
+            self._data = np.concatenate([f.get(self.variable) for f in self.files])
+
+        return self._data
 
 
 class Box:
     """Stores properties of the coordinate system used."""
     def __init__(self, time, lat, lon,
+                 lat_bnds=None, lon_bnds=None,
                  time_units='days',
                  time_start=date(1850, 1, 1)):
         self.time = time
         self.lat = lat
         self.lon = lon
+        self.lat_bnds = lat_bnds
+        self.lon_bnds = lon_bnds
 
         self.time_units = time_units
         self.time_start = time_start
@@ -129,9 +151,11 @@ class Box:
         NetCDF object."""
         lat = nc.variables['lat'][:]
         lon = nc.variables['lon'][:]
+        lat_bnds = nc.variables['lat_bnds'][:]
+        lon_bnds = nc.variables['lon_bnds'][:]
         time = nc.variables['time'][:]
         dt, t0 = parse_time_units(nc.variables['time'].units)
-        return Box(time, lat, lon, dt, t0)
+        return Box(time, lat, lon, lat_bnds, lon_bnds, dt, t0)
 
     @staticmethod
     def generate(n_lon):
@@ -225,3 +249,29 @@ class Box:
             return sobel_filter_3d(self, data, weight, physical, variability)
         else:
             return sobel_filter_2d(self, data, weight, physical)
+
+    @property
+    def relative_grid_area(self):
+        lat_bnds = np.radians(self.lat_bnds)
+        lon_bnds = np.radians(self.lon_bnds)
+        delta_lat = (np.sin(lat_bnds[:,1]) - np.sin(lat_bnds[:,0])) / 2
+        delta_lon = (lon_bnds[:,1] - lon_bnds[:,0]) / (2*np.pi)
+        return delta_lon[None,:] * delta_lat[:, None]
+
+    def calibrate_sobel(self, data, delta_t, delta_d):
+        sbc = self.sobel_filter(data, weight=[delta_t, delta_d, delta_d])
+        var_t = (sbc[0]**2 / sbc[3]**2)
+        var_x = (sbc[1]**2 + sbc[2]**2) / sbc[3]**2
+
+        weights = np.repeat(
+            self.relative_grid_area[None, :, :], self.shape[0], axis=0)
+        ft = weighted_quartiles(var_t.flat, weights.flat)
+        fx = weighted_quartiles(var_x.flat, weights.flat)
+        fm = weighted_quartiles((1.0 / sbc[3]).flat, weights.flat)
+
+        return {
+            'time': np.sqrt(ft),
+            'distance': np.sqrt(fx),
+            'magnitude': fm,
+            'gamma': np.sqrt(ft / fx)
+        }
