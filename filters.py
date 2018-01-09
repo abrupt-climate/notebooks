@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.ndimage import (gaussian_filter, sobel)
+from scipy.ndimage import (
+    gaussian_filter, sobel, binary_dilation, generate_binary_structure)
 
 
 def gaussian_filter_2d(box, data, sigma_lat, sigma_lon):
@@ -128,6 +129,55 @@ def sobel_filter_3d(box, data, weight=None, physical=True, variability=None):
         sb[2, :, :, :] /= np.cos(box.lat / 180 * np.pi)[None, :, None]
 
     sb = np.r_[sb, np.ones_like(sb[0:1])]
-    norm = np.sqrt((sb[:-1]**2).sum(axis=0))
-    sb /= norm
+    #norm = np.ma.masked_equal(np.sqrt((sb[:-1]**2).sum(axis=0)), 0.0)
+    #sb /= norm
     return sb
+
+
+def sobel_filter_3d_masked(box, masked_data, weight=None, physical=True, variability=None):
+    """Sobel filter in 3D (time x lat x lon). Effectively computes a
+    derivative.  This filter is normalised to return a rate of change per
+    pixel, or if weights are given, the value is multiplied by the weight to
+    obtain a unitless quantity of change over the given weight.
+
+    :param box: :py:class:`Box` instance
+    :param masked_data: input data, masked array with same shape
+        as ``box.shape``, the mask is filled with zeros before computing
+        the sobel operator.
+    :param weight: weight of each dimension in combining components into
+        a vector magnitude; should have units corresponding those given
+        by ``box.resolution``.
+    :param physical: wether to correct for geometric projection, by dividing
+        the derivative in the longitudinal direction by the cosine of the
+        latitude.
+    :return: Sobel filtered values in homogeneous coordinates. The input mask
+        is dilated by one pixel, after which those values are set to zero.
+        The result is a normal (non-masked) array."""
+    data = masked_data.filled(0.0)
+
+    if weight is None:
+        y = [1/16, 1/16, 1/16]
+    else:
+        y = [(1/16 * w / r).m_as('') for w, r in zip(weight, box.resolution)]
+
+    sb = np.array([
+        sobel(data, mode=['reflect', 'reflect', 'wrap'], axis=i) * y[i]
+        for i in range(3)])
+
+    if variability is not None:
+        for i in range(3):
+            sb[i] /= variability[i]
+
+    if physical:
+        sb[2, :, :, :] /= np.cos(box.lat / 180 * np.pi)[None, :, None]
+
+    new_mask = binary_dilation(
+        masked_data.mask, generate_binary_structure(3, 3), iterations=1)
+    sb = np.r_[sb, np.ones_like(sb[0:1])]
+
+    norm = np.sqrt((sb[:-1]**2).sum(axis=0))
+    with np.errstate(divide='ignore'):
+        sb /= norm
+
+    return np.ma.MaskedArray(
+        sb, np.repeat(new_mask[None,:,:,:], 4, axis=0))

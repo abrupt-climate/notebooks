@@ -5,7 +5,7 @@ import netCDF4
 
 from filters import (
     gaussian_filter_2d, gaussian_filter_3d,
-    sobel_filter_2d, sobel_filter_3d)
+    sobel_filter_2d, sobel_filter_3d, sobel_filter_3d_masked)
 
 from pyparsing import Word, alphas, nums, Group, Suppress, Combine, tokenMap
 from datetime import date, timedelta
@@ -70,6 +70,11 @@ class File(object):
     def get(self, var):
         return self.data.variables[var][self.bounds]
 
+    def get_masked(self, var):
+        data = self.data.variables[var][self.bounds]
+        missing_value = self.data.variables[var].missing_value
+        return np.ma.masked_equal(data, missing_value)
+
     @property
     def time_units(self):
         dt, t0 = parse_time_units(self.data.variables['time'].units)
@@ -81,14 +86,15 @@ class DataSet(object):
     generates a valid :py:class:`Box` instance from these files.
     """
     pattern = "{variable}_*mon_{model}_{scenario}" \
-              "_{realization}_??????-??????.nc"
+              "_{realization}_??????-??????.{extension}"
 
-    def __init__(self, *, path, model, variable, scenario, realization):
+    def __init__(self, *, path, model, variable, scenario, realization, extension="nc"):
         self.path = path
         self.model = model
         self.variable = variable
         self.scenario = scenario
         self.realization = realization
+        self.extension = extension
 
         self._box = None
         self._data = None
@@ -115,8 +121,23 @@ class DataSet(object):
             time = np.concatenate([f.time for f in self.files])
             lat = self.files[0].lat
             lon = self.files[0].lon
-            lat_bnds = self.files[0].lat_bnds
-            lon_bnds = self.files[0].lon_bnds
+
+            try:
+                lat_bnds = self.files[0].lat_bnds
+                lon_bnds = self.files[0].lon_bnds
+            except KeyError:
+                lat_bnds = np.zeros(shape=(len(lat), 2), dtype='float32')
+                lat_bnds[0, 0] = -90.0
+                lat_bnds[1:, 0] = (lat[:-1] + lat[1:]) / 2
+                lat_bnds[:-1, 1] = (lat[:-1] + lat[1:]) / 2
+                lat_bnds[-1, 1] = 90.0
+
+                lon_bnds = np.zeros(shape=(len(lon), 2), dtype='float32')
+                lon_bnds[:, 0] = (np.roll(lon, 1) + lon) / 2
+                lon_bnds[0, 0] -= 180
+                lon_bnds[:, 1] = (np.roll(lon, -1) + lon) / 2
+                lon_bnds[-1, 1] += 180
+
             dt, t0 = self.files[0].time_units
             self._box = Box(time, lat, lon, lat_bnds, lon_bnds, dt, t0)
 
@@ -125,7 +146,7 @@ class DataSet(object):
     @property
     def data(self):
         if self._data is None:
-            self._data = np.concatenate([f.get(self.variable) for f in self.files])
+            self._data = np.ma.concatenate([f.get_masked(self.variable) for f in self.files])
 
         return self._data
 
@@ -245,10 +266,12 @@ class Box:
         :param weight: weight of each dimension in combining components into
             a vector magnitude; should have units corresponding those given
             by ``box.resolution``."""
-        if self.time is not None:
-            return sobel_filter_3d(self, data, weight, physical, variability)
-        else:
+        if self.time is None:
             return sobel_filter_2d(self, data, weight, physical)
+        elif isinstance(data, np.ma.core.MaskedArray):
+            return sobel_filter_3d_masked(self, data, weight, physical, variability)
+        else:
+            return sobel_filter_3d(self, data, weight, physical, variability)
 
     @property
     def relative_grid_area(self):
@@ -260,8 +283,12 @@ class Box:
 
     def calibrate_sobel(self, data, delta_t, delta_d):
         sbc = self.sobel_filter(data, weight=[delta_t, delta_d, delta_d])
-        var_t = (sbc[0]**2 / sbc[3]**2)
-        var_x = (sbc[1]**2 + sbc[2]**2) / sbc[3]**2
+        if isinstance(data, np.ma.core.MaskedArray):
+            var_t = (sbc[0]**2 / sbc[3]**2).filled(0.0)
+            var_x = ((sbc[1]**2 + sbc[2]**2) / sbc[3]**2).filled(0.0)
+        else:
+            var_t = (sbc[0]**2 / sbc[3]**2)
+            var_x = (sbc[1]**2 + sbc[2]**2) / sbc[3]**2
 
         weights = np.repeat(
             self.relative_grid_area[None, :, :], self.shape[0], axis=0)
