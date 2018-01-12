@@ -284,17 +284,19 @@ class Box:
     def calibrate_sobel(self, data, delta_t, delta_d):
         sbc = self.sobel_filter(data, weight=[delta_t, delta_d, delta_d])
         if isinstance(data, np.ma.core.MaskedArray):
-            var_t = (sbc[0]**2 / sbc[3]**2).filled(0.0)
-            var_x = ((sbc[1]**2 + sbc[2]**2) / sbc[3]**2).filled(0.0)
+            var_t = (sbc[0]**2 / sbc[3]**2)[~sbc[0].mask].compressed()
+            var_x = ((sbc[1]**2 + sbc[2]**2) / sbc[3]**2)[~sbc[0].mask].compressed()
+            var_m = (1.0 / sbc[0]).compressed()
         else:
-            var_t = (sbc[0]**2 / sbc[3]**2)
-            var_x = (sbc[1]**2 + sbc[2]**2) / sbc[3]**2
+            var_t = (sbc[0]**2 / sbc[3]**2).flatten()
+            var_x = ((sbc[1]**2 + sbc[2]**2) / sbc[3]**2).flatten()
+            var_m = (1.0 / sbc[0]).flatten()
 
         weights = np.repeat(
             self.relative_grid_area[None, :, :], self.shape[0], axis=0)
-        ft = weighted_quartiles(var_t.flat, weights.flat)
-        fx = weighted_quartiles(var_x.flat, weights.flat)
-        fm = weighted_quartiles((1.0 / sbc[3]).flat, weights.flat)
+        ft = weighted_quartiles(var_t, weights.flat)
+        fx = weighted_quartiles(var_x, weights.flat)
+        fm = weighted_quartiles(var_m, weights.flat)
 
         return {
             'time': np.sqrt(ft),
