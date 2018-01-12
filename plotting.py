@@ -1,5 +1,6 @@
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import numpy as np
 
 
@@ -51,3 +52,30 @@ def plot_mollweide(box, value, **pargs):
 
 def plot_plate_carree(box, value, **pargs):
     return earth_plot(box, value, **pargs)
+
+
+def plot_signal_histogram(box, signal, **pargs):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    # flatten sobel signal
+    n_years = box.shape[0]
+    signal_flat = signal.reshape([n_years, -1])
+
+    # create bins for histograms
+    n_bins = 100
+    bins = np.linspace(signal.min(), signal.max(), n_bins+1)
+
+    # generate histogram for each time step
+    hist = np.zeros(shape=(n_years, n_bins))
+    for t in range(n_years):
+        h, _ = np.histogram(signal_flat[t], bins=bins)
+        hist[t, :] = h
+
+    # plot
+    ax.pcolormesh(box.dates, bins[:-1], hist.T,
+                  norm=colors.LogNorm(vmin=0.1, vmax=hist.max()),
+                  cmap='Purples')
+    ax.plot(box.dates, signal_flat.max(axis=1), '-', c='gray')
+    plt.close()
+    return fig
