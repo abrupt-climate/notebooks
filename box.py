@@ -133,10 +133,16 @@ class DataSet(object):
                 lon_bnds = self.files[0].lon_bnds
             except KeyError:
                 lat_bnds = np.zeros(shape=(len(lat), 2), dtype='float32')
-                lat_bnds[0, 0] = -90.0
-                lat_bnds[1:, 0] = (lat[:-1] + lat[1:]) / 2
-                lat_bnds[:-1, 1] = (lat[:-1] + lat[1:]) / 2
-                lat_bnds[-1, 1] = 90.0
+                if lat[0] > lat[-1]:
+                    lat_bnds[0, 1] = 90.0
+                    lat_bnds[1:, 1] = (lat[:-1] + lat[1:]) / 2
+                    lat_bnds[:-1, 0] = (lat[:-1] + lat[1:]) / 2
+                    lat_bnds[-1, 0] = -90.0
+                else:
+                    lat_bnds[0, 0] = -90.0
+                    lat_bnds[1:, 0] = (lat[:-1] + lat[1:]) / 2
+                    lat_bnds[:-1, 1] = (lat[:-1] + lat[1:]) / 2
+                    lat_bnds[-1, 1] = 90.0
 
                 lon_bnds = np.zeros(shape=(len(lon), 2), dtype='float32')
                 lon_bnds[:, 0] = (np.roll(lon, 1) + lon) / 2
