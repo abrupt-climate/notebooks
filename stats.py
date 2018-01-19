@@ -12,5 +12,6 @@ def weighted_quartiles(sample, weights):
     quartiles = np.array([0, 1/4, 1/2, 3/4, 1])
     order = np.argsort(sample)
     F = np.cumsum(weights[order])
-    indices = np.searchsorted(F, F[-1] * quartiles)
+    indices = [min(i, order.size-1)
+               for i in np.searchsorted(F, F[-1] * quartiles)]
     return sample[order[indices]]

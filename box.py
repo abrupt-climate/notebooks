@@ -2,10 +2,12 @@ from units import unit
 import numpy as np
 from copy import copy
 import netCDF4
+import sys
 
 from filters import (
     gaussian_filter_2d, gaussian_filter_3d,
     sobel_filter_2d, sobel_filter_3d, sobel_filter_3d_masked)
+from scipy.ndimage import uniform_filter
 
 from pyparsing import Word, alphas, nums, Group, Suppress, Combine, tokenMap
 from datetime import date, timedelta
@@ -73,7 +75,11 @@ class File(object):
     def get_masked(self, var):
         data = self.data.variables[var][self.bounds]
         missing_value = self.data.variables[var].missing_value
-        return np.ma.masked_equal(data, missing_value)
+        masked_data = np.ma.masked_equal(data, missing_value)
+        if masked_data.mask is np.ma.nomask:
+            return masked_data.data
+        else:
+            return masked_data
 
     @property
     def time_units(self):
@@ -216,7 +222,7 @@ class Box:
 
     @property
     def shape(self):
-        if self.time is None:
+        if not isinstance(self.time, np.ndarray):
             return (self.lat.size, self.lon.size)
         else:
             return (self.time.size, self.lat.size, self.lon.size)
@@ -231,14 +237,30 @@ class Box:
     def resolution(self):
         """Gives the resolution of the box in units of years and km.
         The resolution of longitude is given as measured on the equator."""
-        res_lat = np.diff(self.lat[1:-1]).mean() * (np.pi / 180) * R_earth
-        res_lon = np.diff(self.lon[1:-1]).mean() * (np.pi / 180) * R_earth
+        res_lat = np.abs(np.diff(self.lat[1:-1]).mean()) * (np.pi / 180) * R_earth
+        res_lon = np.abs(np.diff(self.lon[1:-1]).mean()) * (np.pi / 180) * R_earth
 
-        if self.time is not None:
+        if isinstance(self.time, np.ndarray):
             res_time = np.diff(self.time[1:-1]).mean() * day
             return res_time, res_lat, res_lon
         else:
             return res_lat, res_lon
+
+    def taper_masked_area(self, data, size, n_steps):
+        """Iteratively bleed values from valid regions into the masked area using
+        a uniform filter. This should limit boundary effects when filtering later on.
+        The masked area is zeroed before running.
+        Output is written back to the original data."""
+        if not isinstance(data, np.ma.core.MaskedArray):
+            raise TypeError("Expected a masked array.")
+
+        if data.mask is np.ma.nomask:
+            print("Mask is empty, not doing anything.", file=sys.stderr)
+
+        data.data[data.mask] = 0.0
+        for i in range(n_steps):
+            temp = uniform_filter(data.data, size, mode='wrap')
+            data.data[data.mask] = temp[data.mask]
 
     def gaussian_filter(self, data, sigma):
         """Filters a data set with a Gaussian, correcting for the distortion
@@ -249,7 +271,7 @@ class Box:
         :param sigma: list of sigmas with the correct dimension.
         :return: :py:class:`numpy.ndarray` with the same shape as input.
         """
-        if self.time is not None:
+        if isinstance(self.time, np.ndarray):
             return gaussian_filter_3d(self, data, *sigma)
         else:
             return gaussian_filter_2d(self, data, *sigma)
@@ -266,9 +288,9 @@ class Box:
         :param weight: weight of each dimension in combining components into
             a vector magnitude; should have units corresponding those given
             by ``box.resolution``."""
-        if self.time is None:
+        if not isinstance(self.time, np.ndarray):
             return sobel_filter_2d(self, data, weight, physical)
-        elif isinstance(data, np.ma.core.MaskedArray):
+        elif isinstance(data, np.ma.core.MaskedArray) and data.mask is not np.ma.nomask:
             return sobel_filter_3d_masked(self, data, weight, physical, variability)
         else:
             return sobel_filter_3d(self, data, weight, physical, variability)
@@ -283,20 +305,22 @@ class Box:
 
     def calibrate_sobel(self, data, delta_t, delta_d):
         sbc = self.sobel_filter(data, weight=[delta_t, delta_d, delta_d])
-        if isinstance(data, np.ma.core.MaskedArray):
-            var_t = (sbc[0]**2 / sbc[3]**2)[~sbc[0].mask].compressed()
-            var_x = ((sbc[1]**2 + sbc[2]**2) / sbc[3]**2)[~sbc[0].mask].compressed()
-            var_m = (1.0 / sbc[0]).compressed()
+        if isinstance(data, np.ma.core.MaskedArray) and (data.mask is not np.ma.nomask):
+            var_t = (sbc[0]**2 / sbc[3]**2).compressed()
+            var_x = ((sbc[1]**2 + sbc[2]**2) / sbc[3]**2).compressed()
+            var_m = (1.0 / sbc[3]).compressed()
+            weights = np.repeat(
+                self.relative_grid_area[None, :, :], self.shape[0], axis=0)[~data.mask].flatten()
         else:
             var_t = (sbc[0]**2 / sbc[3]**2).flatten()
             var_x = ((sbc[1]**2 + sbc[2]**2) / sbc[3]**2).flatten()
-            var_m = (1.0 / sbc[0]).flatten()
+            var_m = (1.0 / sbc[3]).flatten()
+            weights = np.repeat(
+                self.relative_grid_area[None, :, :], self.shape[0], axis=0).flatten()
 
-        weights = np.repeat(
-            self.relative_grid_area[None, :, :], self.shape[0], axis=0)
-        ft = weighted_quartiles(var_t, weights.flat)
-        fx = weighted_quartiles(var_x, weights.flat)
-        fm = weighted_quartiles(var_m, weights.flat)
+        ft = weighted_quartiles(var_t, weights)
+        fx = weighted_quartiles(var_x, weights)
+        fm = weighted_quartiles(var_m, weights)
 
         return {
             'time': np.sqrt(ft),
