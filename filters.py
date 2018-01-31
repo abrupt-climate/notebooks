@@ -51,7 +51,7 @@ def gaussian_filter_3d(box, data, sigma_t, sigma_lat, sigma_lon):
     print("Sigmas:", s_t, s_lat, s_lon)
 
     outp = np.zeros_like(data)
-    for i, lat_rad in enumerate(box.lat / 180 * np.pi):
+    for i, lat_rad in enumerate(box.lat_bnds.mean(axis=1) / 180 * np.pi):
         gaussian_filter(
             data[:, i, :],
             min(data.shape[2], s_lon / np.cos(lat_rad)),
@@ -127,7 +127,7 @@ def sobel_filter_3d(box, data, weight=None, physical=True, variability=None):
             sb[i] /= variability[i]
 
     if physical:
-        sb[2, :, :, :] /= np.cos(box.lat / 180 * np.pi)[None, :, None]
+        sb[2, :, :, :] /= np.cos(box.lat_bnds.mean(axis=1) / 180 * np.pi)[None, :, None]
 
     sb = np.r_[sb, np.ones_like(sb[0:1])]
     norm = np.sqrt((sb[:-1]**2).sum(axis=0))
