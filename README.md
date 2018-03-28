@@ -18,6 +18,8 @@ These notebooks depend on:
 This last package needs some libraries to be installed. Installation
 instructions differ slightly, depending on your OS.
 
+See Installation_Instructions.txt for more detailed information.
+
 ### Debian / Ubuntu
 
 ```bash
