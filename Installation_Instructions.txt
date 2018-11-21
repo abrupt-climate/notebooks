@@ -1,22 +1,31 @@
-1. OS: The software is made for Linux systems. Windows is not supported, but Windows-Users could install a virtualbox and install an Ubuntu system inside it, for example.
+1. OS: The software is made for Linux systems. Windows is not supported, but Windows-Users could install a virtualbox 
+and install an Ubuntu system inside it, for example.
 
 2. Install git (for example see https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 
-3. Clone the respository notebooks and the repository hypercc. The third repository of the project abrupt-climate, hyper-canny, and a software to handle the workflow (called noodles) are downloaded automatically when following the instructions further.
+3. Clone the respository notebooks and the repository hypercc. The third repository of the project abrupt-climate, 
+hyper-canny, and a software to handle the workflow (called noodles) are downloaded automatically when following the
+instructions further.
 On how to clone a repository see here: https://help.github.com/articles/cloning-a-repository/#platform-linux
 
-4. Python: The software is based on python3.5 (python 3.5.6 is known to work). Other versions of python (even newer ones like python 3.6) can lead to errors. It is therefore advised to use Python 3.5 from the start.
+4. Python: The software is based on python3.5 (python 3.5.6 is known to work). Other versions of python (even newer 
+ones like python 3.6) can lead to errors. It is therefore advised to use Python 3.5 from the start.
 
-To this end, it is helpful to use a software that allows switching between python versions in order to keep other software unaffected, and to create and then activate a virtual environment before using the edge detector.
-A very useful software to do both is pyenv. To install it follow these instructions: https://www.tecmint.com/pyenv-install-and-manage-multiple-python-versions-in-linux/ 
+To this end, it is helpful to use a software that allows switching between python versions in order to keep other 
+software unaffected, and to create and then activate a virtual environment before using the edge detector.
+A very useful software to do both is pyenv. To install it follow these instructions: 
+https://www.tecmint.com/pyenv-install-and-manage-multiple-python-versions-in-linux/ 
 
-Before creating the virtual environment with pyenv, one needs to install the packages tk and tk-dev (problems with tkinter have been encountered if this is not done):
+Before creating the virtual environment with pyenv, one needs to install the packages tk and tk-dev 
+(problems with tkinter have been encountered if this is not done):
 
 For example, for Ubuntu / Debian type:
 apt install tk
 apt install tk-dev
 
-Make sure that the correct path to the python executable and libraries are set (e.g. in .bashrc), and that the commands pip and python refer to the correct python version (for example, pip can sometimes refer to python2 instead of 3, which would make it necessary to type pip3 instead of pip, or set an alias in the .bashrc)
+Make sure that the correct path to the python executable and libraries are set (e.g. in .bashrc), and that the 
+commands pip and python refer to the correct python version (for example, pip can sometimes refer to Python 2 
+instead of Python 3, which would make it necessary to type pip3 instead of pip, or set an alias in the .bashrc)
 
 5. Install libraries:
 In Ubuntu / Debian: apt install g++ proj-bin libproj-dev libgeos-dev
@@ -25,7 +34,9 @@ Fedora: dnf install gcc-c++ geos-devel proj-devel
 6. Install numpy by typing: 
 pip install numpy
 
-7. Go to the notebooks folder that has been cloned from github. There is a file called requirements.txt. This can be used to install needed software by typing: pip install -r requirements.txt
+7. Go to the notebooks folder that has been cloned from github. There is a file called requirements.txt. 
+This can be used to install needed software by typing: 
+pip install -r requirements.txt
 
 8. Having cloned hypercc from github as explained above, to install it, go into the hypercc folder, and type 
 pip install --upgrade .
