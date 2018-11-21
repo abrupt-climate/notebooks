@@ -1,35 +1,36 @@
-1. OS: The software is made for Linux systems. Windows is not supported.
-However, Windows users can for example install a virtualbox and install
-an Ubuntu system inside it.
+1. OS: The software is made for Linux systems. Windows is not supported, but Windows-Users could install a virtualbox and install an Ubuntu system inside it, for example.
 
-2. Required software at this point: git, python 3.5 or higher. To install git, for
-example see https://git-scm.com/book/en/v2/Getting-Started-Installing-Git.
-For python instructions, for example see 
-https://www.digitalocean.com/community/tutorials/how-to-install-python-3-and-set-up-a-local-programming-environment-on-ubuntu-1
-It is not necessary but may be convenient for advanced users to create and
-then activate a virtual environment, see http://docs.python-guide.org/en/latest/dev/virtualenvs/
+2. Install git (for example see https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 
-3. Clone the repositories called notebooks and hypercc. For advice on how to
-clone a repository see here: https://help.github.com/articles/cloning-a-repository/#platform-linux
-There is a third repository called hyper-canny, but it will be installed automatically 
-when following the installation instructions below.
+3. Clone the respository notebooks and the repository hypercc. The third repository of the project abrupt-climate, hyper-canny, and a software to handle the workflow (called noodles) are downloaded automatically when following the instructions further.
+On how to clone a repository see here: https://help.github.com/articles/cloning-a-repository/#platform-linux
 
-4. Install libraries.
-For Ubuntu / Debian type:  apt install g++ proj-bin libproj-dev libgeos-dev 
-For Fedora type:  dnf install gcc-c++ geos-devel proj-devel
+4. Python: The software is based on python3.5 (python 3.5.6 is known to work). Other versions of python (even newer ones like python 3.6) can lead to errors. It is therefore advised to use Python 3.5 from the start.
 
-5. Go to the notebooks folder that has been cloned from github. There is
-a file called requirements.txt. This can be used to install the required software by typing: 
-pip install -r requirements.txt
+To this end, it is helpful to use a software that allows switching between python versions in order to keep other software unaffected, and to create and then activate a virtual environment before using the edge detector.
+A very useful software to do both is pyenv. To install it follow these instructions: https://www.tecmint.com/pyenv-install-and-manage-multiple-python-versions-in-linux/ 
 
-6. Before using the notebooks, get hypercc from github as mentioned above.
-Go into the hypercc folder, and type 
-pip3 install --upgrade .
+Before creating the virtual environment with pyenv, one needs to install the packages tk and tk-dev (problems with tkinter have been encountered if this is not done):
 
-7. One can now use jupyter to open and run a notebook from the folder
-notebooks, or use hypercc from the terminal to scan climate model output
-from the Coupled Model Intercomparison Project CMIP5.
+For example, for Ubuntu / Debian type:
+apt install tk
+apt install tk-dev
 
+Make sure that the correct path to the python executable and libraries are set (e.g. in .bashrc), and that the commands pip and python refer to the correct python version (for example, pip can sometimes refer to python2 instead of 3, which would make it necessary to type pip3 instead of pip, or set an alias in the .bashrc)
 
-In case of questions or comments, please feel free to contact sebastian.bathiany@web.de
+5. Install libraries:
+In Ubuntu / Debian: apt install g++ proj-bin libproj-dev libgeos-dev
+Fedora: dnf install gcc-c++ geos-devel proj-devel
+
+6. Install numpy by typing: 
+pip install numpy
+
+7. Go to the notebooks folder that has been cloned from github. There is a file called requirements.txt. This can be used to install needed software by typing: pip install -r requirements.txt
+
+8. Having cloned hypercc from github as explained above, to install it, go into the hypercc folder, and type 
+pip install --upgrade .
+
+9. One can now use jupyter to open and run a notebook from the folder notebooks, or use hypercc from the terminal to scan climate model output from the Coupled Model Intercomparison Project CMIP5.
+
+In case of questions or comments, please feel free to contact sebastian.bathiany@hzg.de
 and/or j.hidding@esciencecenter.nl.
