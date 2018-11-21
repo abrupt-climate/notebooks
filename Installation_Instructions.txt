@@ -41,7 +41,8 @@ pip install -r requirements.txt
 8. Having cloned hypercc from github as explained above, to install it, go into the hypercc folder, and type 
 pip install --upgrade .
 
-9. One can now use jupyter to open and run a notebook from the folder notebooks, or use hypercc from the terminal to scan climate model output from the Coupled Model Intercomparison Project CMIP5.
+9. One can now use jupyter to open and run a notebook from the folder notebooks, or use hypercc from the terminal 
+to scan climate model output from the Coupled Model Intercomparison Project CMIP5.
 
 In case of questions or comments, please feel free to contact sebastian.bathiany@hzg.de
 and/or j.hidding@esciencecenter.nl.
