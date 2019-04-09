@@ -3,9 +3,7 @@ and install an Ubuntu system inside it, for example.
 
 2. Install git (for example see https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 
-3. Clone the respository notebooks and the repository hypercc. The third repository of the project abrupt-climate, 
-hyper-canny, and a software to handle the workflow (called noodles) are downloaded automatically when following the
-instructions further.
+3. Clone the respository called "notebooks" and the repository called "hypercc". The third repository of the project, "hyper-canny", and software to handle the workflow (called "noodles") are downloaded automatically when following the instructions further.
 On how to clone a repository see here: https://help.github.com/articles/cloning-a-repository/#platform-linux
 
 4. Python: The software is based on python3.5 (python 3.5.6 is known to work). Other versions of python (even newer 
@@ -44,10 +42,16 @@ pip install --upgrade .
 9. Install jupyter notebook by typing:
 pip install jupyter
 
-10. How to run it: One can now use jupyter to open and run a notebook from the folder notebooks. To start jupyter, type
+10. One can now use jupyter to open and run a notebook from the folder "notebooks", or use hypercc from the terminal to scan climate model output from the Coupled Model Intercomparison Project CMIP5.
+
+To start jupyter, type
 jupyter notebook
 
 To scan a large amount of files automatically, e.g. climate model output from the Coupled Model Intercomparison Project CMIP5, use hypercc from the terminal by editing and running the ksh script in hypercc/scripts.
 
+The syntax and list of possible parameters for using hypercc from the terminal can be obtained with
+./hypercc --help
+and additional input parameters with
+./hypercc report --help
 In case of questions or comments, please feel free to contact sebastian.bathiany@hzg.de
 and/or j.hidding@esciencecenter.nl.
